@@ -1,0 +1,19 @@
+{
+  "name": "fuse-router",
+  "version": "0.0.0",
+  "description": "An express like api for fuse filesystems",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": {
+    "name": "Max Campbell",
+    "email": "npm@maxc.in",
+    "url": "https://maxc.in/"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "fuse-bindings": "^2.11.2",
+    "path-to-regexp": "^2.2.1"
+  }
+}
