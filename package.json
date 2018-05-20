@@ -1,6 +1,6 @@
 {
   "name": "fuse-router",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "An express like api for fuse filesystems",
   "main": "index.js",
   "scripts": {
