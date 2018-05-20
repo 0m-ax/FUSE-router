@@ -1,10 +1,13 @@
 const FUSERouter = require('./index')
 let app = new FUSERouter()
-// log the request object
-app.use('/', function (req, cb, next) {
-    console.log(req)
-    next()
-})
+// // log the request object
+// app.use('/', function (req, cb, next) {
+//     console.log(req)
+//     next()
+// })
+
+//let cool = new FUSERouter.Router()
+
 // return info about the root directory
 app.getattr('/', function (req, cb) {
     cb(0, {
@@ -19,13 +22,18 @@ app.getattr('/', function (req, cb) {
     })
 })
 // return list of files in directory
-app.readdir('/', function (req, cb) {
-    cb(0, ['afile'])
+app.readdir('/', function (req, cb,next) {
+    console.log('meme')
+    next()
+}, function (req, cb) {
+    console.log('yes')
+    cb(0, ['afile.txt'])
 })
+//app.use('/',cool.route)
 let afile = new FUSERouter.Router()
 
 // return info about the file
-afile.getattr('/', function (req, cb) {
+afile.getattr( function (req, cb) {
     cb(0, {
         mtime: new Date(),
         atime: new Date(),
@@ -38,7 +46,7 @@ afile.getattr('/', function (req, cb) {
     })
 })
 // return contents of the file
-afile.read('/', function (req, cb) {
+afile.read( function (req, cb) {
     console.log(req)
     var str = 'hello world\n'.slice(req.properties.position, req.properties.position + req.properties.length)
     if (!str) return cb(0)
@@ -47,16 +55,16 @@ afile.read('/', function (req, cb) {
     return cb(str.length)
 })
 // allow the OS to open the file
-afile.open('/', function (req, cb) {
+afile.open( function (req, cb) {
     cb(0, 42) // 42 is an fd
 })
-afile.truncate('/',function (req, cb) {
+afile.truncate(function (req, cb) {
     cb(0)
 })
-afile.write('/',function (req, cb) {
+afile.write(function (req, cb) {
     cb(req.properties.length)
 })
-app.use('/afile',afile.route)
+app.use('/afile.txt',afile.route)
 // mount the file system on ./test
 app.start('./test')
 

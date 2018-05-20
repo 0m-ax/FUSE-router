@@ -14,9 +14,7 @@ class Router {
         this._route(undefined,request,callback,next)
     }
     _route(offset = 0,request,callback,next){
-        //console.log('_r',offset)
-        let routes = this._routes.filter((route)=>route.match(request))
-        //console.log(routes)
+        let routes = this._routes.filter((route)=> route.match(request));
         if(offset < routes.length){
             let route = routes[offset]
             route.load(request,callback,this._route.bind(this,offset+1,request,callback,next))
@@ -24,64 +22,87 @@ class Router {
             next()
         }
     }
-    readdir(path,callback){
-        this._routes.push(new Route(path,'readdir',true,callback))
+    readdir(path,...callbacks){
+        this._routes.push(new Route(path,'readdir',true,callbacks))
     }
-    getattr(path,callback){
-        this._routes.push(new Route(path,'getattr',true,callback))
+    getattr(path,...callbacks){
+        this._routes.push(new Route(path,'getattr',true,callbacks))
     }
-    read(path,callback){
-        this._routes.push(new Route(path,'read',true,callback))
+    read(path,...callbacks){
+        this._routes.push(new Route(path,'read',true,callbacks))
     }
-    write(path,callback){
-        this._routes.push(new Route(path,'write',true,callback))
+    write(path,...callbacks){
+        this._routes.push(new Route(path,'write',true,callbacks))
     }
-    open(path,callback){
-        this._routes.push(new Route(path,'open',true,callback))
+    open(path,...callbacks){
+        this._routes.push(new Route(path,'open',true,callbacks))
     }
-    truncate(path,callback){
-        this._routes.push(new Route(path,'truncate',true,callback))
+    truncate(path,...callbacks){
+        this._routes.push(new Route(path,'truncate',true,callbacks))
     }
-    use(path,callback){
-        this._routes.push(new Route(path,undefined,false,callback))
+    use(path,...callbacks){
+        this._routes.push(new Route(path,undefined,false,callbacks))
     }
 }
 class Route {
-    constructor(path,methord,full=true,handle){
+    constructor(path,method,full=true,handles=[]){
+        if(typeof path == 'function'){
+            handles.unshift(path)
+            path = undefined;
+        }
         this.path = path;
-        this.methord = methord;
-        this.handle = handle;
+        this.method = method;
+        this.handles = handles;
         this.keys = []
-        this.re = pathToRegexp(this.path, this.keys,{
-            end:full
-        })
+        if(this.path){
+            this.re = pathToRegexp(this.path, this.keys,{
+                end:full
+            })
+        }
     }
     match(request){
-        if(this.methord && this.methord !== request.methord){
+        if(this.method && this.method !== request.method){
             return false;
         }
-        let match = this.re.exec(request.path)
-        return match !== null;
+        if(this.path !== undefined){
+            let match = this.re.exec(request.path)
+            return match !== null;
+        }else{
+            return true;
+        }
     }
     getRequestProps(request){
-        let match = this.re.exec(request.path)
-        //let path = match.join()
-        let params = {}
-        let path =match.shift()
-        delete match['index']
-        delete match['input']
-        for(let i in match){
-            params[this.keys[i].name] = match[i]
-        }
-        return {
-            path:request.path.substring(path.length),
-            params
+        if(this.path === undefined){
+            return {
+                params:{},
+                path:request.path
+            }
+        }else {
+            let match = this.re.exec(request.path)
+            let params = {}
+            let path =match.shift()
+            delete match['index']
+            delete match['input']
+            for(let i in match){
+                params[this.keys[i].name] = match[i]
+            }
+            return {
+                path:request.path.substring(path.length),
+                params
+            }
         }
 
     }
     load(request,callback,next){
         let newRequest = Object.assign({},request,this.getRequestProps(request))
-        this.handle(newRequest,callback,next)
+        this._load(0,newRequest,callback,next)
+    }
+    _load(offset=0,request,callback,next){
+        if(offset < this.handles.length){
+            this.handles[offset](request,callback,this._load.bind(this,offset+1,request,callback,next))
+        }else{
+            next()
+        }
     }
 }
 class FUSERouter extends Router {
@@ -93,7 +114,7 @@ class FUSERouter extends Router {
         fuse.mount(mountPath, {
             readdir (path, callback) {
                 self.route({
-                    methord:'readdir',
+                    method:'readdir',
                     path,
                     params:{}
                 },callback,()=>{
@@ -102,7 +123,7 @@ class FUSERouter extends Router {
             },
             getattr(path,callback){
                 self.route({
-                    methord:'getattr',
+                    method:'getattr',
                     path,
                     params:{}
                 },callback,()=>{
@@ -111,7 +132,7 @@ class FUSERouter extends Router {
             },
             truncate(path,size,callback){
                 self.route({
-                    methord:'truncate',
+                    method:'truncate',
                     properties:{
                         size
                     },
@@ -123,7 +144,7 @@ class FUSERouter extends Router {
             },
             write(path,fileDescriptor,buffer,length,position,callback){
                 self.route({
-                    methord:'write',
+                    method:'write',
                     properties:{
                         fileDescriptor,
                         buffer,
@@ -138,7 +159,7 @@ class FUSERouter extends Router {
             },
             read(path,fileDescriptor,buffer,length,position,callback){
                 self.route({
-                    methord:'read',
+                    method:'read',
                     path,
                     properties:{
                         fileDescriptor,
@@ -153,7 +174,7 @@ class FUSERouter extends Router {
             },
             open(path,flags,callback){
                 self.route({
-                    methord:'open',
+                    method:'open',
                     path,
                     properties:{
                         flags,
